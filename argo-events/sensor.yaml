@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: aws-sqs
+spec:
+  template:
+    container:
+      env:
+       - name: DEBUG_LOG
+         value: "true"  
+  dependencies:
+    - name: test-dep-tenant1
+      eventSourceName: sqs-es-testqueue-dev
+      eventName: sqs-tenant1
+    - name: test-dep-tenant2
+      eventSourceName: sqs-es-testqueue-dev
+      eventName: sqs-tenant2
+  triggers:
+    - template:
+        name: sqs-workflow
+        conditions: "test-dep-tenant1 || test-dep-tenant2"
+        k8s:
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: aws-sqs-workflow-
+              spec:
+                entrypoint: whalesay
+                arguments:
+                  parameters:
+                  - name: message
+                    # this is the value that should be overridden
+                    value: hello world
+                templates:
+                - name: whalesay
+                  inputs:
+                    parameters:
+                    - name: message
+                  container:
+                    image: docker/whalesay:latest
+                    command: [cowsay]
+                    args: ["{{inputs.parameters.message}}"]
+                    env: 
+                      - name : DEBUG_LOG
+                        value: "true"
+          parameters:
+            - src:
+                dependencyName: test-dep-tenant1
+                dataKey: body.message
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: test-dep-tenant1
+                dataKey: metadata.tenant
+              dest: metadata.namespace
+            - src:
+                dependencyName: test-dep-tenant2
+                dataKey: body.message
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: test-dep-tenant2
+                dataKey: metadata.tenant
+              dest: metadata.namespace
+

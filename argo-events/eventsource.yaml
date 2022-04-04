@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: sqs-es-testqueue-dev
+  namespace: argo-events
+spec:
+  template:
+    container:
+	# debug logs are not getting printed with this setting
+      env:
+       - name: DEBUG_LOG
+         value: "true"
+  sqs:
+    sqs-tenant1:
+      jsonBody: true
+      region: us-east-1
+      queue: testqueue-tenant1
+      waitTimeSeconds: 20
+      metadata: {"tenant" : "tenant1"}
+      accessKey:
+        key: accesskey
+        name: aws-secret
+      secretKey:
+        key: secretkey
+        name: aws-secret
+    sqs-tenant2:
+      jsonBody: true
+      region: us-east-1
+      queue: testqueue-tenant2
+      waitTimeSeconds: 20
+      metadata: {"tenant" : "tenant2"}
+      accessKey:
+        key: accesskey
+        name: aws-secret
+      secretKey:
+        key: secretkey
+        name: aws-secret
+
